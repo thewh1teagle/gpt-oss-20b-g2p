@@ -7,104 +7,14 @@ We're about to demonstrate the power of the new OpenAI GPT-OSS 20B model through
 """
 
 from unsloth import FastLanguageModel
+from model import get_model
 import torch
 max_seq_length = 1024
 dtype = None
 
-# 4bit pre quantized models we support for 4x faster downloading + no OOMs.
-fourbit_models = [
-    "unsloth/gpt-oss-20b-unsloth-bnb-4bit", # 20B model using bitsandbytes 4bit quantization
-    "unsloth/gpt-oss-120b-unsloth-bnb-4bit",
-    "unsloth/gpt-oss-20b", # 20B model using MXFP4 format
-    "unsloth/gpt-oss-120b",
-] # More models at https://huggingface.co/unsloth
 
-model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "unsloth/gpt-oss-20b",
-    dtype = dtype, # None for auto detection
-    max_seq_length = max_seq_length, # Choose any for long context!
-    load_in_4bit = True,  # 4 bit quantization to reduce memory
-    full_finetuning = False, # [NEW!] We have full finetuning now!
-    # token = "hf_...", # use one if using gated models
-)
+model, tokenizer = get_model()
 
-"""We now add LoRA adapters for parameter efficient finetuning - this allows us to only efficiently train 1% of all parameters."""
-
-model = FastLanguageModel.get_peft_model(
-    model,
-    r = 8, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
-    target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
-                      "gate_proj", "up_proj", "down_proj",],
-    lora_alpha = 16,
-    lora_dropout = 0, # Supports any, but = 0 is optimized
-    bias = "none",    # Supports any, but = "none" is optimized
-    # [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
-    use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
-    random_state = 3407,
-    use_rslora = False,  # We support rank stabilized LoRA
-    loftq_config = None, # And LoftQ
-)
-
-"""### Reasoning Effort
-The `gpt-oss` models from OpenAI include a feature that allows users to adjust the model's "reasoning effort." This gives you control over the trade-off between the model's performance and its response speed (latency) which by the amount of token the model will use to think.
-
-----
-
-The `gpt-oss` models offer three distinct levels of reasoning effort you can choose from:
-
-* **Low**: Optimized for tasks that need very fast responses and don't require complex, multi-step reasoning.
-* **Medium**: A balance between performance and speed.
-* **High**: Provides the strongest reasoning performance for tasks that require it, though this results in higher latency.
-"""
-
-from transformers import TextStreamer
-
-messages = [
-    {"role": "user", "content": "Solve x^5 + 3x^4 - 10 = 3."},
-]
-inputs = tokenizer.apply_chat_template(
-    messages,
-    add_generation_prompt = True,
-    return_tensors = "pt",
-    return_dict = True,
-    reasoning_effort = "low", # **NEW!** Set reasoning effort to low, medium or high
-).to("cuda")
-
-_ = model.generate(**inputs, max_new_tokens = 64, streamer = TextStreamer(tokenizer))
-
-"""Changing the `reasoning_effort` to `medium` will make the model think longer. We have to increase the `max_new_tokens` to occupy the amount of the generated tokens but it will give better and more correct answer"""
-
-from transformers import TextStreamer
-
-messages = [
-    {"role": "user", "content": "Solve x^5 + 3x^4 - 10 = 3."},
-]
-inputs = tokenizer.apply_chat_template(
-    messages,
-    add_generation_prompt = True,
-    return_tensors = "pt",
-    return_dict = True,
-    reasoning_effort = "medium", # **NEW!** Set reasoning effort to low, medium or high
-).to("cuda")
-
-_ = model.generate(**inputs, max_new_tokens = 64, streamer = TextStreamer(tokenizer))
-
-"""Lastly we will test it using `reasoning_effort` to `high`"""
-
-from transformers import TextStreamer
-
-messages = [
-    {"role": "user", "content": "Solve x^5 + 3x^4 - 10 = 3."},
-]
-inputs = tokenizer.apply_chat_template(
-    messages,
-    add_generation_prompt = True,
-    return_tensors = "pt",
-    return_dict = True,
-    reasoning_effort = "high", # **NEW!** Set reasoning effort to low, medium or high
-).to("cuda")
-
-_ = model.generate(**inputs, max_new_tokens = 64, streamer = TextStreamer(tokenizer))
 
 """<a name="Data"></a>
 ### Data Prep
