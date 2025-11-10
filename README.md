@@ -17,3 +17,10 @@ uv run main.py
 ```
 
 Based on [Unsloth's GPT-OSS 20B finetuning](https://colab.research.google.com/gist/thewh1teagle/d2f4f7334b42d134887cd36b28f0ddf5/gpt-oss-20b-fine-tuning.ipynb)
+
+
+## TODO
+
+- [ ] Add a CSV dataset
+- [ ] Add WER/CER evaluation
+- [ ] Evaluate with [Hebrew G2P Benchmark](https://github.com/thewh1teagle/heb-g2p-benchmark)
