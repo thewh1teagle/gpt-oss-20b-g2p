@@ -1,0 +1,7 @@
+[project]
+name = "gpt-oss-20b-g2p"
+version = "0.1.0"
+description = "GPT-OSS 20B G2P"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
